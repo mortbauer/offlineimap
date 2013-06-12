@@ -42,11 +42,11 @@ class OfflineImap:
       oi = OfflineImap()
       oi.run()
     """
-    def run(self):
+    def run(self,args=None):
         """Parse the commandline and invoke everything"""
 
         parser = OptionParser(version=offlineimap.__version__,
-                              description="%s.\n\n%s" % 
+                              description="%s.\n\n%s" %
                               (offlineimap.__copyright__,
                                offlineimap.__license__))
         parser.add_option("-1",
@@ -103,7 +103,7 @@ class OfflineImap:
               "Only sync the specified folders. The folder names "
               "are the *untranslated* foldernames. This "
               "command-line option overrides any 'folderfilter' "
-              "and 'folderincludes' options in the configuration " 
+              "and 'folderincludes' options in the configuration "
               "file.")
 
         parser.add_option("-k", dest="configoverride",
@@ -139,11 +139,14 @@ class OfflineImap:
               "not usable. Possible interface choices are: %s " %
               ", ".join(UI_LIST.keys()))
 
-        (options, args) = parser.parse_args()
+        if args:
+            (options, args) = parser.parse_args(args)
+        else:
+            (options, args) = parser.parse_args()
 
         #read in configuration file
         configfilename = os.path.expanduser(options.configfile)
-    
+
         config = CustomConfigParser()
         if not os.path.exists(configfilename):
             logging.error(" *** Config file '%s' does not exist; aborting!" %
@@ -157,7 +160,7 @@ class OfflineImap:
                 logging.warn("Profile mode: Forcing to singlethreaded.")
                 options.singlethreading = True
             if os.path.exists(options.profiledir):
-                logging.warn("Profile mode: Directory '%s' already exists!" % 
+                logging.warn("Profile mode: Directory '%s' already exists!" %
                              options.profiledir)
             else:
                 os.mkdir(options.profiledir)
@@ -197,7 +200,7 @@ class OfflineImap:
         #set up additional log files
         if options.logfile:
             ui.setlogfd(open(options.logfile, 'wt'))
-    
+
         #welcome blurb
         ui.init_banner()
 
@@ -242,36 +245,36 @@ class OfflineImap:
                     config.set(section, "folderincludes", folderincludes)
 
         self.config = config
-    
+
         def sigterm_handler(signum, frame):
             # die immediately
             ui = getglobalui()
             ui.terminate(errormsg="terminating...")
 
         signal.signal(signal.SIGTERM,sigterm_handler)
-    
+
         try:
             pidfd = open(config.getmetadatadir() + "/pid", "w")
             pidfd.write(str(os.getpid()) + "\n")
             pidfd.close()
         except:
             pass
-    
+
         try:
             if options.logfile:
                 sys.stderr = ui.logfile
-    
+
             socktimeout = config.getdefaultint("general", "socktimeout", 0)
             if socktimeout > 0:
                 socket.setdefaulttimeout(socktimeout)
-    
+
             activeaccounts = config.get("general", "accounts")
             if options.accounts:
                 activeaccounts = options.accounts
             activeaccounts = activeaccounts.replace(" ", "")
             activeaccounts = activeaccounts.split(",")
             allaccounts = accounts.AccountHashGenerator(config)
-    
+
             syncaccounts = []
             for account in activeaccounts:
                 if account not in allaccounts:
@@ -284,15 +287,15 @@ class OfflineImap:
                     ui.terminate(1, errortitle = 'Unknown Account "%s"'%account, errormsg = errormsg)
                 if account not in syncaccounts:
                     syncaccounts.append(account)
-    
+
             server = None
             remoterepos = None
             localrepos = None
-    
+
             threadutil.initInstanceLimit('ACCOUNTLIMIT',
                                     config.getdefaultint('general',
                                                          'maxsyncaccounts', 1))
-    
+
             for reposname in config.getsectionlist('Repository'):
                 for instancename in ["FOLDER_" + reposname,
                                      "MSGCOPY_" + reposname]:
@@ -309,11 +312,11 @@ class OfflineImap:
                 elif sig == signal.SIGUSR2:
                     # tell each account to stop looping
                     accounts.Account.set_abort_event(self.config, 2)
-                
+
             signal.signal(signal.SIGHUP,sig_handler)
             signal.signal(signal.SIGUSR1,sig_handler)
             signal.signal(signal.SIGUSR2,sig_handler)
-    
+
             #various initializations that need to be performed:
             offlineimap.mbnames.init(config, syncaccounts)
 
