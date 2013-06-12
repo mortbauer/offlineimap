@@ -345,7 +345,7 @@ class OfflineImap:
                 t.start()
                 threadutil.exitnotifymonitorloop(threadutil.threadexited)
 
-            ui.terminate()
+            #ui.terminate()
         except KeyboardInterrupt:
             ui.terminate(1, errormsg = 'CTRL-C pressed, aborting...')
             return
